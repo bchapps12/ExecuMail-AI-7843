@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   IoMailUnreadOutline,
@@ -6,23 +6,27 @@ import {
   IoSendOutline,
   IoChevronDownOutline,
   IoChevronUpOutline,
-  IoDocumentTextOutline,
+  IoGitBranchOutline,
+  IoSaveOutline,
   IoVolumeHighOutline,
   IoVolumeMuteOutline,
   IoMicOutline,
   IoMicOffOutline
 } from 'react-icons/io5';
 import PriorityBadge from './PriorityBadge';
+import ThreadSummary from './ThreadSummary';
 
-const EmailCard = ({ email, onReply }) => {
+const EmailCard = ({ email, onReply, onSaveAsDraft }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showThreadSummary, setShowThreadSummary] = useState(false);
   const [context, setContext] = useState('');
   const [isReading, setIsReading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const speechSynthesis = window.speechSynthesis;
   const recognition = window.webkitSpeechRecognition ? new window.webkitSpeechRecognition() : null;
 
-  const toggleSpeech = () => {
+  const toggleSpeech = (e) => {
+    e.stopPropagation();
     if (isReading) {
       speechSynthesis.cancel();
       setIsReading(false);
@@ -34,7 +38,8 @@ const EmailCard = ({ email, onReply }) => {
     }
   };
 
-  const toggleRecording = () => {
+  const toggleRecording = (e) => {
+    e.stopPropagation();
     if (!recognition) {
       alert('Speech recognition is not supported in your browser');
       return;
@@ -88,10 +93,7 @@ const EmailCard = ({ email, onReply }) => {
             <div className="flex items-center space-x-2">
               <h4 className="text-xs font-medium text-gray-700">AI Summary</h4>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleSpeech();
-                }}
+                onClick={toggleSpeech}
                 className="p-1 hover:bg-gray-200 rounded-full"
               >
                 {isReading ? (
@@ -121,25 +123,27 @@ const EmailCard = ({ email, onReply }) => {
             className="overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {email.keyPoints && (
-              <ul className="mt-2 text-sm text-gray-600 pl-2">
-                {email.keyPoints.map((point, index) => (
-                  <li key={index} className="flex items-center mt-1">
-                    <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mr-2"></span>
-                    <span className="text-xs">{point}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
             <div className="mt-3 space-y-2">
-              <button
-                onClick={() => window.alert('View original email')}
-                className="flex items-center justify-center w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm"
-              >
-                <IoDocumentTextOutline className="mr-2" />
-                View Original
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowThreadSummary(!showThreadSummary)}
+                  className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                  <IoGitBranchOutline className="mr-2" />
+                  {showThreadSummary ? 'Hide Thread' : 'View Thread'}
+                </button>
+                <button
+                  onClick={() => onSaveAsDraft(email, context)}
+                  className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm"
+                >
+                  <IoSaveOutline className="mr-2" />
+                  Save Draft
+                </button>
+              </div>
+
+              {showThreadSummary && email.thread && (
+                <ThreadSummary thread={email.thread} />
+              )}
 
               <div className="relative">
                 <textarea
@@ -162,7 +166,7 @@ const EmailCard = ({ email, onReply }) => {
 
               <motion.button
                 layout="position"
-                onClick={() => onReply({ ...email, context })}
+                onClick={() => onReply(email)}
                 className="flex items-center justify-center w-full bg-primary-500 hover:bg-primary-600 text-white py-2 px-4 rounded-lg transition-colors text-sm"
               >
                 <IoSendOutline className="mr-2" />
